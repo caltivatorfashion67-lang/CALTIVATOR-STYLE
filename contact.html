@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Contact Us - CALTIVATOR STYLE</title>
+<meta name="description" content="Get in touch with CALTIVATOR STYLE for questions about sizing, delivery, or payments.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav">
+      <a href="shop.html">Shop</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<section class="contact-section">
+  <div class="container contact-grid">
+
+    <div class="contact-info-col">
+      <p class="eyebrow">Get In Touch</p>
+      <h1 class="section-title">Contact Us</h1>
+      <p class="contact-sub">Questions about sizing, delivery, payments, or anything else? We're happy to help.</p>
+
+      <div class="contact-detail">
+        <h4>Email</h4>
+        <p>caltivatorfashion67@gmail.com</p>
+      </div>
+      <div class="contact-detail">
+        <h4>Phone</h4>
+        <p>+91 9662275525</p>
+      </div>
+      <div class="contact-detail">
+        <h4>Hours</h4>
+        <p>Monday - Saturday, 9:00 AM - 6:00 PM</p>
+      </div>
+    </div>
+
+    <div class="contact-form-col">
+      <form id="contactForm" class="auth-form" novalidate>
+        <label>
+          Full Name
+          <input type="text" id="ctName" required minlength="2">
+        </label>
+        <label>
+          Email Address
+          <input type="email" id="ctEmail" required>
+        </label>
+        <label>
+          Phone Number (optional)
+          <input type="tel" id="ctPhone" pattern="[0-9]{10}" placeholder="10-digit mobile number">
+        </label>
+        <label>
+          Message
+          <textarea id="ctMessage" rows="5" required minlength="5" placeholder="How can we help?"></textarea>
+        </label>
+        <p class="field-error" id="contactError"></p>
+        <button type="submit" class="btn-primary full" id="contactSubmitBtn">Send Message</button>
+      </form>
+    </div>
+
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 CALTIVATOR STYLE.</span>
+  </div>
+</footer>
+
+<script type="module" src="auth-header.js"></script>
+<script type="module">
+import { db } from "./firebase-config.js";
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+document.getElementById("contactForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  const errorEl = document.getElementById("contactError");
+  errorEl.textContent = "";
+
+  const phone = document.getElementById("ctPhone").value.trim();
+  if(phone && !/^[0-9]{10}$/.test(phone)){
+    errorEl.textContent = "Please enter a valid 10-digit phone number, or leave it blank.";
+    return;
+  }
+
+  const btn = document.getElementById("contactSubmitBtn");
+  btn.disabled = true;
+  btn.textContent = "Sending...";
+
+  try {
+    await addDoc(collection(db, "contact_messages"), {
+      name: document.getElementById("ctName").value.trim(),
+      email: document.getElementById("ctEmail").value.trim().toLowerCase(),
+      phone: phone,
+      message: document.getElementById("ctMessage").value.trim(),
+      submittedAt: serverTimestamp()
+    });
+    this.reset();
+    errorEl.style.color = "#1e6b3a";
+    errorEl.textContent = "Message sent! We'll get back to you soon.";
+  } catch (err) {
+    errorEl.style.color = "";
+    errorEl.textContent = "Something went wrong. Please try again.";
+  }
+  btn.disabled = false;
+  btn.textContent = "Send Message";
+});
+</script>
+</body>
+</html>

@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CALTIVATOR STYLE - Ecommerce Fashion Store</title>
+<meta name="description" content="CALTIVATOR STYLE - Premium Men's fashion, Women, and Trending Outfits. Shop the latest trends with fast delivery across India.">
+<link rel="icon" type="my-logo.png" href="my-logo.png.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+
+<!-- HEADER -->
+<header class="site-header">
+  <div class="container header-inner">
+    <button type="button" class="wish-heart ${typeof isInWishlist === "function" && isInWishlist(p.id) ? "active" : ""}" data-id="${p.id}" onclick="event.preventDefault(); this.classList.toggle('active', toggleWishlist('${p.id}'));">&#9825;</button>
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav" id="mainNav">
+      <a href="shop.html">Shop</a>
+      <a href="shop.html?cat=Men">Men</a>
+      <a href="shop.html?cat=Women">Women</a>
+      <a href="shop.html?cat=Trending Outfits">Trending Outfits</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <form class="search-form" id="searchForm">
+      <input type="search" id="searchInput" placeholder="Search products...">
+    </form>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+      <a href="wishlist.html" class="wishlist-btn" title="Wishlist">&#9825; <span id="wishlistCount">0</span></a>
+      <button class="cart-btn" id="cartToggle">Cart (<span id="cartCount">0</span>)</button>
+    </div>
+  </div>
+</header>
+
+<!-- CART DRAWER -->
+<aside class="cart-drawer" id="cartDrawer">
+  <div class="cart-drawer-head">
+    <h3>Your Cart</h3>
+    <button id="cartClose">&times;</button>
+  </div>
+  <div class="cart-items" id="cartItems">
+    <p class="cart-empty-msg">No items found.</p>
+  </div>
+  <div class="cart-subtotal">
+    <span>Subtotal</span>
+    <span id="cartSubtotalValue">₹0</span>
+  </div>
+  <button class="btn-primary full" id="checkoutBtn">Continue to Checkout</button>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-slide">
+    <img src="caltivator-hero.png" alt="Caltivator Hero Image">
+  </div>
+  <div class="hero-content container">
+    <p class="eyebrow">Exclusive &amp; Trending Collection</p>
+    <h1>Upgrade Your Wardrobe Today</h1>
+    <p class="hero-sub">500 exclusive pieces you won't find anywhere else.</p>
+    <a href="#shop" class="btn-primary">Shop Now &rarr;</a>
+  </div>
+</section>
+
+
+<!-- FEATURED PRODUCTS -->
+<section class="products" id="shop">
+  <div class="container">
+    <p class="eyebrow center">Exclusive Finds</p>
+    <h2 class="section-title center">Featured Products</h2>
+    <div class="product-grid" id="featuredGrid"></div>
+  </div>
+</section>
+
+<!-- QUALITY -->
+<section class="quality">
+  <div class="container quality-grid">
+    <img src="caltivator-premium-collection.png" alt="Caltivator Style Premium Collection">
+    <div class="quality-text">
+      <h2>Designed To Stand Out</h2>
+<p>At CALTIVATOR STYLE Style, we create premium fashion that combines comfort, quality, and modern trends. Every product is designed to give you confidence, style, and the perfect fit for every occasion.</p>  
+      <div class="quality-points">
+        <div><h4>Premium Quality & Timeless Style</h4><p>Premium quality products, secure shopping, fast delivery, and dedicated customer support for every order.</p></div>
+        <div><h4>Premium Collection</h4><p>Discover our exclusive collection of premium T-Shirts, Shirts, Straight Fit Jeans, Baggy Jeans, and Street Fit Jeans. Crafted with high-quality fabrics, modern designs, and superior comfort to give you a confident look for every occasion.</p></div>
+      </div>
+      <a href="shop.html" class="btn-outline">Shop Now &rarr;</a>
+    </div>
+  </div>
+</section>
+
+<!-- VISION / STATS -->
+<section class="vision">
+  <div class="container vision-grid">
+    <div class="vision-text">
+      <h2>Find the perfect finishing touches at CALTIVATOR STYLE</h2>
+      <p>Our vision at CALTIVATOR STYLE is to lead the fashion industry with innovative and sustainable practices. By expanding our reach and impact, we aim to make a positive difference in the world of fashion and beyond.</p>
+      <a href="#shop" class="btn-primary">Shop Now &rarr;</a>
+      <div class="stats">
+        <div><strong>80%</strong><span>Fashion Industry Growth</span></div>
+        <div><strong>1.45m</strong><span>Social Media Influence</span></div>
+      </div>
+    </div>
+    <img src="https://cdn.prod.website-files.com/664dbaa0345a48040e70603f/668e0c79d3e1055d66107010_vision.jpg" alt="Sustainable fashion">
+  </div>
+</section>
+
+<!-- LATEST PRODUCTS -->
+<section class="products alt">
+  <div class="container">
+    <p class="eyebrow center">Now Trending</p>
+    <h2 class="section-title center">Latest Products</h2>
+    <div class="product-grid" id="latestGrid"></div>
+    <div class="center-btn"><a href="#shop" class="btn-outline">View All Products &rarr;</a></div>
+  </div>
+</section>
+
+<!-- FEATURES -->
+<section class="features">
+  <div class="container features-grid">
+    <div class="feature"><h4>Handcrafted Perfection</h4><p>Where our skilled artisans breathe life into each creation, ensuring quality and beauty.</p></div>
+    <div class="feature"><h4>Global Craftsmanship</h4><p>Discover the artistry of global craftsmanship embedded in every piece at CALTIVATOR STYLE.</p></div>
+    <div class="feature"><h4>Size-Inclusive Designs</h4><p>CALTIVATOR STYLE embraces diversity with size-inclusive designs that cater to every body shape.</p></div>
+  </div>
+</section>
+
+<!-- NEWSLETTER -->
+<section class="newsletter">
+  <div class="container newsletter-box">
+    <h2>Stay Fashionable with CALTIVATOR STYLE's Newsletter!</h2>
+    <p>Subscribe for updates on new arrivals, special promotions, and styling advice.</p>
+    <form id="newsletterForm">
+      <input type="email" placeholder="Enter your email" required>
+      <button type="submit" class="btn-primary">Subscribe</button>
+    </form>
+    <p class="form-msg" id="formMsg"></p>
+  </div>
+</section>
+
+<!-- CUSTOMER REVIEWS SECTION -->
+<section class="cr-section" id="customerReviews">
+  <div class="cr-container">
+    <p class="cr-eyebrow">Testimonials</p>
+    <h2 class="cr-title">Customer Reviews</h2>
+
+    <div class="cr-grid" id="crGrid"></div>
+
+    <div class="cr-form-wrap">
+      <h3>Share Your Experience</h3>
+      <form id="crForm" class="cr-form">
+        <label>
+          Your Name
+          <input type="text" id="crName" required minlength="2" placeholder="Enter your name">
+        </label>
+        <label>
+          Your Rating
+          <div class="cr-star-picker" id="crStarPicker">
+            <button type="button" class="cr-star-btn" data-value="1">&#9733;</button>
+            <button type="button" class="cr-star-btn" data-value="2">&#9733;</button>
+            <button type="button" class="cr-star-btn" data-value="3">&#9733;</button>
+            <button type="button" class="cr-star-btn" data-value="4">&#9733;</button>
+            <button type="button" class="cr-star-btn" data-value="5">&#9733;</button>
+          </div>
+        </label>
+        <label>
+          Your Review
+          <textarea id="crComment" rows="4" required minlength="5" placeholder="Tell us what you think..."></textarea>
+        </label>
+        <p class="cr-error" id="crError"></p>
+        <button type="submit" class="cr-submit-btn">Submit Review</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer" id="contact">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <div class="logo">CALTIVATOR STYLE</div>
+      <p>Free Shipping &middot; Flexible Payment &middot; Fast Delivery &middot; Premium Support</p>
+    </div>
+    <div>
+      <h5>Pages</h5>
+      <a href="index.html">About us</a><a href="shop.html">Shop</a><a href="contact.html">Contact us</a><a href="terms.html">Terms &amp; Conditions</a>
+    </div>
+    <div>
+      <h5>Resources</h5>
+      <a href="shop.html">Categories</a><a href="return-policy.html">Return Policy</a><a href="privacy-policy.html">Privacy Policy</a>
+    </div>
+    <div>
+    <h5>Social</h5>
+    <a href="https://www.instagram.com/avinash_07_ll?igsh=MWJieHN0cG51c3BuYg==" target="_blank">
+        <i class="fab fa-instagram"></i> Instagram
+    </a>
+</div>
+  </div>
+  <div class="container footer-bottom">
+    <span>&copy; 2026 Caltivator Style.</span>
+  </div>
+</footer>
+
+<script src="products.js"></script>
+<script src="cart.js"></script>
+<script type="module" src="auth-header.js"></script>
+<script type="module" src="newsletter.js"></script>
+<script src="script.js"></script>
+<script>(function(){
+  const grid = document.getElementById("crGrid");
+  const form = document.getElementById("crForm");
+  const errorEl = document.getElementById("crError");
+  let selectedRating = 0;
+
+  function initials(name){
+    return name.trim().split(/\s+/).slice(0,2).map(w => w[0].toUpperCase()).join("");
+  }
+
+  function starsHTML(rating){
+    let html = "";
+    for(let i = 1; i <= 5; i++){
+      html += `<span class="cr-star ${i <= rating ? "filled" : ""}">&#9733;</span>`;
+    }
+    return html;
+  }
+
+  function cardHTML(r){
+    return `
+      <div class="cr-card">
+        <div class="cr-card-head">
+          <div class="cr-avatar">${initials(r.name)}</div>
+          <div>
+            <h5>${r.name}</h5>
+            <div class="cr-stars">${starsHTML(r.rating)}</div>
+          </div>
+        </div>
+        <p class="cr-comment">${r.comment}</p>
+      </div>
+    `;
+  }
+
+  function getReviews(){
+    return JSON.parse(localStorage.getItem("cr_reviews") || "[]");
+  }
+  function saveReviews(list){
+    localStorage.setItem("cr_reviews", JSON.stringify(list));
+  }
+
+  function renderAll(){
+    const list = getReviews();
+    grid.innerHTML = list.length
+      ? list.map(cardHTML).join("")
+      : `<p class="cr-empty-msg">No reviews yet — be the first to share your experience!</p>`;
+  }
+  renderAll();
+
+  // Star picker
+  document.querySelectorAll(".cr-star-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      selectedRating = parseInt(btn.dataset.value, 10);
+      document.querySelectorAll(".cr-star-btn").forEach(b => {
+        b.classList.toggle("selected", parseInt(b.dataset.value, 10) <= selectedRating);
+      });
+    });
+  });
+
+  // Submit review
+  form.addEventListener("submit", function(e){
+    e.preventDefault();
+    errorEl.textContent = "";
+
+    const name = document.getElementById("crName").value.trim();
+    const comment = document.getElementById("crComment").value.trim();
+
+    if(selectedRating === 0){
+      errorEl.textContent = "Please select a star rating.";
+      return;
+    }
+
+    const review = { name, rating: selectedRating, comment };
+    const list = getReviews();
+    list.unshift(review);
+    saveReviews(list);
+
+    grid.innerHTML = cardHTML(review) + grid.innerHTML.replace(/<p class="cr-empty-msg">.*?<\/p>/, "");
+
+    form.reset();
+    selectedRating = 0;
+    document.querySelectorAll(".cr-star-btn").forEach(b => b.classList.remove("selected"));
+  });
+})();</script>
+<script>(function(){
+  const slider = document.querySelector('.product-slider');
+  if(!slider) return;
+
+  let isDown = false;
+  let startX;
+  let scrollLeft;
+
+  slider.addEventListener('mousedown', (e) => {
+    isDown = true;
+    startX = e.pageX - slider.offsetLeft;
+    scrollLeft = slider.scrollLeft;
+  });
+  slider.addEventListener('mouseleave', () => { isDown = false; });
+  slider.addEventListener('mouseup', () => { isDown = false; });
+  slider.addEventListener('mousemove', (e) => {
+    if(!isDown) return;
+    e.preventDefault();
+    const x = e.pageX - slider.offsetLeft;
+    const walk = (x - startX) * 1.5;
+    slider.scrollLeft = scrollLeft - walk;
+  });
+})();</script>
+
+</body>
+</html>

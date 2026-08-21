@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Product - CALTIVATOR STYLE</title>
+<meta name="description" content="Shop premium men's fashion at CALTIVATOR STYLE - quality craftsmanship, timeless style.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+      <span></span><span></span><span></span>
+    </button>
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav" id="mainNav">
+      <a href="shop.html">Shop</a>
+      <a href="shop.html?cat=Men">Men</a>
+      <a href="shop.html?cat=Women">Women</a>
+      <a href="shop.html?cat=Trending outfits">Trending Outfits</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+      <a href="wishlist.html" class="wishlist-btn" title="Wishlist">&#9825; <span id="wishlistCount">0</span></a>
+      <button class="cart-btn" id="cartToggle">Cart (<span id="cartCount">0</span>)</button>
+    </div>
+  </div>
+</header>
+
+<!-- CART DRAWER -->
+<aside class="cart-drawer" id="cartDrawer">
+  <div class="cart-drawer-head">
+    <h3>Your Cart</h3>
+    <button id="cartClose">&times;</button>
+  </div>
+  <div class="cart-items" id="cartItems">
+    <p class="cart-empty-msg">No items found.</p>
+  </div>
+  <div class="cart-subtotal">
+    <span>Subtotal</span>
+    <span id="cartSubtotalValue">₹0</span>
+  </div>
+  <button class="btn-primary full" id="checkoutBtn">Continue to Checkout</button>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<section class="product-detail">
+  <div class="container">
+    <a href="index.html#shop" class="back-link">&larr; Back to Shop</a>
+
+    <div class="product-detail-grid" id="productDetail">
+      <!-- filled by JS -->
+    </div>
+    <div class="related-products" id="relatedProducts"></div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 CALTIVATOR STYLE.</span>
+  </div>
+</footer>
+
+<script src="products.js"></script>
+<script src="cart.js"></script>
+<script type="module" src="auth-header.js"></script>
+<script src="wishlist.js"></script>
+
+<!-- ---- MAIN PRODUCT RENDER ----
+     This is a plain (non-module) script so it runs immediately and never
+     waits on Firebase. Every size starts as "in stock"; the module script
+     below quietly upgrades sizes to "out of stock" once/if it hears back
+     from Firestore. This way the page always works, Firebase or not. -->
+<script>
+const params = new URLSearchParams(window.location.search);
+const productId = params.get("id");
+const product = getProductById(productId);
+
+const detailEl = document.getElementById("productDetail");
+let selectedSize = null;
+let qty = 1;
+
+if(!product){
+  detailEl.innerHTML = `<p class="not-found">Product not found. <a href="index.html#shop">Go back to shop</a>.</p>`;
+} else {
+  document.title = product.name + " - CALTIVATOR STYLE";
+
+  detailEl.innerHTML = `
+    <div class="gallery">
+      <div class="gallery-main">
+        <img id="mainImage" src="${product.images[0]}" alt="${product.name}">
+      </div>
+      <div class="gallery-thumbs" id="galleryThumbs">
+        ${product.images.map((img, i) => `
+          <button class="thumb-btn ${i === 0 ? "active" : ""}" data-img="${img}">
+            <img src="${img}" alt="${product.name} photo ${i + 1}">
+          </button>
+        `).join("")}
+      </div>
+    </div>
+
+    <div class="product-detail-info">
+      <h1>${product.name}</h1>
+      <div class="price detail-price">
+        ₹${product.price.toLocaleString("en-IN")}
+        ${product.oldPrice ? `<span class="old">₹${product.oldPrice.toLocaleString("en-IN")}</span>` : ""}
+      </div>
+      <p class="product-description">${product.description}</p>
+      <p class="stock-note ${product.stock === 0 ? "out" : ""}">${product.stock > 0 ? product.stock + " left in stock" : "Out of stock"}</p>
+
+      ${product.sizeType ? `
+      <div class="size-row">
+        <span>Size</span>
+        <div class="size-options" id="sizeOptions">
+          ${SIZE_OPTIONS[product.sizeType].map((s) => `<button type="button" class="size-btn" data-size="${s}">${s}</button>`).join("")}
+        </div>
+      </div>
+      <p class="field-error" id="sizeError"></p>
+      ` : ""}
+
+      <div class="qty-row">
+        <span>Quantity</span>
+        <div class="qty-controls">
+          <button class="qty-btn" id="qtyMinus">&minus;</button>
+          <span id="qtyValue">1</span>
+          <button class="qty-btn" id="qtyPlus">+</button>
+        </div>
+      </div>
+
+      <div class="detail-actions">
+        <button class="btn-outline" id="addToCartBtn" ${product.stock === 0 ? "disabled" : ""}>Add to Cart</button>
+        <button class="btn-primary" id="buyNowBtn" ${product.stock === 0 ? "disabled" : ""}>Buy Now</button>
+        <button type="button" class="wish-heart detail-heart" id="detailWishBtn">&#9825;</button>
+      </div>
+      <p class="add-msg" id="addMsg"></p>
+    </div>
+  `;
+
+  // ---- Size selector ----
+  if(product.sizeType){
+    document.querySelectorAll(".size-btn").forEach(btn => {
+      btn.addEventListener("click", () => {
+        if(btn.classList.contains("size-out")){
+          document.getElementById("sizeError").textContent = "This size is out of stock.";
+          return;
+        }
+        selectedSize = btn.dataset.size;
+        document.querySelectorAll(".size-btn").forEach(b => b.classList.remove("active"));
+        btn.classList.add("active");
+        document.getElementById("sizeError").textContent = "";
+      });
+    });
+  }
+
+  // ---- Gallery ----
+  const mainImage = document.getElementById("mainImage");
+  document.querySelectorAll(".thumb-btn").forEach(btn => {
+    btn.addEventListener("click", () => {
+      mainImage.src = btn.dataset.img;
+      document.querySelectorAll(".thumb-btn").forEach(b => b.classList.remove("active"));
+      btn.classList.add("active");
+    });
+  });
+
+  // ---- Quantity ----
+  const qtyValueEl = document.getElementById("qtyValue");
+  document.getElementById("qtyMinus").addEventListener("click", () => {
+    if(qty > 1){ qty--; qtyValueEl.textContent = qty; }
+  });
+  document.getElementById("qtyPlus").addEventListener("click", () => {
+    qty++; qtyValueEl.textContent = qty;
+  });
+
+  // ---- Add to Cart ----
+  document.getElementById("addToCartBtn").addEventListener("click", () => {
+    if(product.sizeType && !selectedSize){
+      document.getElementById("sizeError").textContent = "Please select a size.";
+      return;
+    }
+    addToCart(product, qty, selectedSize);
+    document.getElementById("addMsg").textContent = "Added to cart!";
+    document.getElementById("cartDrawer").classList.add("open");
+    document.getElementById("overlay").classList.add("show");
+  });
+
+  // ---- Buy Now ----
+  document.getElementById("buyNowBtn").addEventListener("click", () => {
+    if(product.sizeType && !selectedSize){
+      document.getElementById("sizeError").textContent = "Please select a size.";
+      return;
+    }
+    addToCart(product, qty, selectedSize);
+    window.location.href = "checkout.html";
+  });
+}
+</script>
+
+<!-- ---- LIVE STOCK UPGRADE (runs after the page above already works) ----
+     If Firebase isn't set up yet, or the request fails, this quietly does
+     nothing and every size just stays selectable. -->
+<script type="module">
+import { db } from "./firebase-config.js";
+import { doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+(async () => {
+  if(!product || !product.sizeType) return;
+  try {
+    const stockSnap = await getDoc(doc(db, "productStock", product.id));
+    if(!stockSnap.exists()) return;
+    const sizeStock = stockSnap.data();
+
+    document.querySelectorAll(".size-btn").forEach(btn => {
+      const size = btn.dataset.size;
+      if(sizeStock[size] === 0){
+        btn.classList.add("size-out");
+        btn.setAttribute("data-tooltip", "Out of Stock");
+        if(btn.classList.contains("active")){
+          btn.classList.remove("active");
+          selectedSize = null;
+        }
+      }
+    });
+  } catch (err) {
+    // Firebase not reachable/configured yet — page keeps working as-is.
+  }
+})();
+</script>
+
+<script src="script.js"></script>
+<script>(function(){
+  // ---- Adjust these two selectors to match your existing gallery ----
+  const mainImage = document.getElementById('mainImage');       // your main/large image element
+  const thumbs = document.querySelectorAll('.thumb-btn');       // your thumbnail buttons (each with the image URL)
+
+  if(!mainImage || thumbs.length === 0) return;
+
+  // Build an array of image URLs from your existing thumbnails
+  const images = Array.from(thumbs).map(t => t.dataset.img || t.querySelector('img')?.src);
+  let currentIndex = 0;
+
+  function showImage(index){
+    if(index < 0) index = images.length - 1;      // loop to last image
+    if(index >= images.length) index = 0;         // loop to first image
+    currentIndex = index;
+    mainImage.src = images[currentIndex];
+
+    // Keep active thumbnail highlight in sync (if your CSS uses .active)
+    thumbs.forEach((t, i) => t.classList.toggle('active', i === currentIndex));
+  }
+
+  // ---- Touch swipe detection ----
+  let touchStartX = 0;
+  let touchEndX = 0;
+  const SWIPE_THRESHOLD = 40; // minimum px distance to count as a swipe
+
+  mainImage.addEventListener('touchstart', (e) => {
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive: true });
+
+  mainImage.addEventListener('touchend', (e) => {
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  }, { passive: true });
+
+  function handleSwipe(){
+    const distance = touchEndX - touchStartX;
+    if(Math.abs(distance) < SWIPE_THRESHOLD) return; // ignore small taps/drags
+
+    if(distance < 0){
+      showImage(currentIndex + 1); // swiped left -> next image
+    } else {
+      showImage(currentIndex - 1); // swiped right -> previous image
+    }
+  }
+
+  // Keep currentIndex correct if user taps a thumbnail directly
+  thumbs.forEach((t, i) => {
+    t.addEventListener('click', () => { currentIndex = i; });
+  });
+  document.getElementById("detailWishBtn").addEventListener("click", function(){
+  this.classList.toggle("active", toggleWishlist(product.id));
+
+  if(typeof stockData !== 'undefined' && stockData.TOTAL === 0){
+    const stockNote = document.querySelector(".stock-note");
+    if(stockNote){
+      stockNote.textContent = "Out of stock";
+      stockNote.classList.add("out");
+    }
+    document.getElementById("addToCartBtn").disabled = true;
+    document.getElementById("buyNowBtn").disabled = true;
+  }
+});
+  const related = ALL_PRODUCTS.filter(p => p.category === product.category && p.id !== product.id).slice(0, 4);
+if(related.length > 0){
+  document.getElementById("relatedProducts").innerHTML = `
+    <h2 class="section-title" style="margin-top:60px;">You May Also Like</h2>
+    <div class="product-grid">
+      ${related.map(p => `
+        <a class="product-card" href="product.html?id=${p.id}">
+          <div class="img-wrap"><img src="${p.images[0]}" alt="${p.name}" loading="lazy"></div>
+          <div class="product-info">
+            <h4>${p.name}</h4>
+            <div class="price">₹${p.price.toLocaleString("en-IN")}</div>
+          </div>
+        </a>
+      `).join("")}
+    </div>
+  `;
+}
+});
+;</script>
+</body>
+</html>

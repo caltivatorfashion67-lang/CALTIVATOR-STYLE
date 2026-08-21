@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Account - Caltivator Style</title>
+<meta name="description" content="View your Caltivator Style profile and order history.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-requires-auth="true">
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">Caltivator Style</a>
+    <nav class="main-nav">
+      <a href="index.html#shop">Shop</a>
+      <a href="index.html#collection">Collection</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <button class="btn-text" id="logoutBtn" style="cursor:pointer;background:none;border:none;font-family:'Inter',sans-serif;">Logout</button>
+    </div>
+  </div>
+</header>
+
+<section class="account-section">
+  <div class="container">
+
+    <div class="account-profile">
+      <div class="avatar" id="avatarInitial">A</div>
+      <div>
+        <h2 id="profileName">Loading...</h2>
+        <p id="profileEmail"></p>
+        <p id="profilePhone"></p>
+        <button class="profile-edit-toggle" id="editToggleBtn">Edit Profile</button>
+      </div>
+    </div>
+
+    <form class="profile-edit-form" id="profileEditForm">
+      <label>
+        Full Name
+        <input type="text" id="editName" required minlength="2">
+      </label>
+      <label>
+        Phone Number
+        <input type="tel" id="editPhone" pattern="[0-9]{10}" required>
+      </label>
+      <button type="submit" class="btn-primary full">Save Changes</button>
+      <p class="save-msg" id="saveMsg"></p>
+    </form>
+
+    <div class="account-orders">
+      <p class="eyebrow">My Orders</p>
+      <h2 class="section-title">Order Details</h2>
+
+      <div class="order-list" id="orderList"><p class="no-orders">Loading your orders...</p></div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 Caltivator Style.</span>
+  </div>
+</footer>
+
+<script type="module" src="auth-header.js"></script>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+let currentUid = null;
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return; // auth-header.js will redirect to login.html
+  currentUid = user.uid;
+
+  // ---- Load profile from Firestore (with a safe fallback so the page never gets stuck) ----
+  try {
+    const profileSnap = await getDoc(doc(db, "users", user.uid));
+    const profile = profileSnap.exists()
+      ? profileSnap.data()
+      : { name: user.displayName || "Customer", email: user.email, phone: "" };
+
+    document.getElementById("profileName").textContent = profile.name;
+    document.getElementById("profileEmail").textContent = profile.email;
+    document.getElementById("profilePhone").textContent = profile.phone;
+    document.getElementById("avatarInitial").textContent = profile.name.charAt(0).toUpperCase();
+    document.getElementById("editName").value = profile.name;
+    document.getElementById("editPhone").value = profile.phone;
+  } catch (err) {
+    console.error("Could not load profile:", err);
+    // Fall back to whatever Firebase Auth already knows, so the page still shows something useful.
+    document.getElementById("profileName").textContent = user.displayName || "Customer";
+    document.getElementById("profileEmail").textContent = user.email || "";
+    document.getElementById("profilePhone").textContent = "Could not load (check Firestore rules)";
+    document.getElementById("avatarInitial").textContent = (user.displayName || "C").charAt(0).toUpperCase();
+  }
+
+  loadOrders(user.uid);
+});
+
+// ---- Toggle edit form ----
+document.getElementById("editToggleBtn").addEventListener("click", () => {
+  document.getElementById("profileEditForm").classList.toggle("open");
+});
+
+// ---- Save profile changes ----
+document.getElementById("profileEditForm").addEventListener("submit", async (e) => {
+  e.preventDefault();
+  const name = document.getElementById("editName").value.trim();
+  const phone = document.getElementById("editPhone").value.trim();
+  const saveMsg = document.getElementById("saveMsg");
+
+  if (!/^[0-9]{10}$/.test(phone)) {
+    saveMsg.style.color = "#b3261e";
+    saveMsg.textContent = "Please enter a valid 10-digit phone number.";
+    return;
+  }
+
+  await updateDoc(doc(db, "users", currentUid), { name, phone });
+
+  document.getElementById("profileName").textContent = name;
+  document.getElementById("profilePhone").textContent = phone;
+  document.getElementById("avatarInitial").textContent = name.charAt(0).toUpperCase();
+  saveMsg.style.color = "#1e6b3a";
+  saveMsg.textContent = "Profile updated!";
+});
+
+// ---- Load this user's orders from Firestore ----
+async function loadOrders(uid){
+  const orderList = document.getElementById("orderList");
+  try {
+    // No orderBy here on purpose — combining where() + orderBy() on different
+    // fields needs a Firestore composite index. We sort in JavaScript instead,
+    // which needs no extra setup.
+    const q = query(collection(db, "orders"), where("uid", "==", uid));
+    const querySnap = await getDocs(q);
+
+    if (querySnap.empty) {
+      orderList.innerHTML = `<p class="no-orders">You haven't placed any orders yet. <a href="index.html#shop">Start shopping</a>.</p>`;
+      return;
+    }
+
+    const orders = querySnap.docs.map(d => ({ docId: d.id, ...d.data() }));
+    orders.sort((a, b) => (b.createdAt?.seconds || 0) - (a.createdAt?.seconds || 0));
+
+    let html = "";
+    orders.forEach((o) => {
+      const canCancel = o.status === "Placed";
+      html += `
+        <div class="order-card">
+          <div class="order-top">
+            <span class="order-id">Order #${o.orderId}</span>
+            <span class="order-status status-${o.status.toLowerCase()}">${o.status}</span>
+          </div>
+          <p class="order-items">${o.items}</p>
+          <p class="order-eta">Estimated delivery: ${o.estimatedDelivery || "-"}</p>
+          <div class="order-bottom">
+            <span>${o.date}</span>
+            <span>₹${o.total.toLocaleString("en-IN")}</span>
+          </div>
+          ${canCancel ? `<button class="cancel-order-btn" data-doc-id="${o.docId}">Cancel Order</button>` : ""}
+        </div>
+      `;
+    });
+    orderList.innerHTML = html;
+
+    document.querySelectorAll(".cancel-order-btn").forEach(btn => {
+      btn.addEventListener("click", async () => {
+        if (!confirm("Are you sure you want to cancel this order?")) return;
+        await updateDoc(doc(db, "orders", btn.dataset.docId), { status: "Cancelled" });
+        loadOrders(uid); // refresh the list
+      });
+    });
+  } catch (err) {
+    console.error("Could not load orders:", err);
+    orderList.innerHTML = `<p class="no-orders">Could not load orders (${err.code || "unknown error"}). This usually means Firestore Security Rules haven't been set up yet, or Firestore's default test-mode window has expired.</p>`;
+  }
+}
+</script>
+</body>
+</html>

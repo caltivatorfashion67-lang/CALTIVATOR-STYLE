@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Order Placed - CALTIVATOR STYLE</title>
+<meta name="description" content="Your CALTIVATOR STYLE order has been placed.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav">
+      <a href="index.html#shop">Shop</a>
+      <a href="index.html#collection">Collection</a>
+      <a href="index.html#contact">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<section class="success-section">
+  <div class="container success-box">
+    <div class="success-icon">&#10003;</div>
+    <h1>Order Placed Successfully!</h1>
+    <p id="orderIdMsg">Your order has been confirmed.</p>
+    <p class="success-sub" id="etaMsg"></p>
+    <div class="success-actions">
+      <a href="index.html#shop" class="btn-outline">Continue Shopping</a>
+      <a href="account.html" class="btn-primary">View My Orders</a>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 CALTIVATOR STYLE.</span>
+  </div>
+</footer>
+
+<script type="module" src="auth-header.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+const orderId = params.get("orderId");
+const eta = params.get("eta");
+if(orderId){
+  document.getElementById("orderIdMsg").textContent = "Your order #" + orderId + " has been confirmed.";
+}
+document.getElementById("etaMsg").textContent = eta
+  ? "Estimated delivery: " + eta
+  : "You'll find this order under \"My Account\" going forward.";
+</script>
+</body>
+</html>

@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Login - CALTIVATOR STYLE</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav">
+      <a href="index.html#shop">Shop</a>
+      <a href="index.html#collection">Collection</a>
+      <a href="index.html#contact">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<section class="auth-section">
+  <div class="auth-card">
+    <p class="eyebrow center">Welcome Back</p>
+    <h2 class="section-title center">Login to Your Account</h2>
+
+    <form id="loginForm" class="auth-form" novalidate>
+      <label>
+        Email Address
+        <input type="email" id="loginEmail" placeholder="you@example.com" required>
+      </label>
+      <label>
+        Password
+        <input type="password" id="loginPassword" placeholder="Enter your password" required>
+      </label>
+
+      <p class="field-error" id="loginError"></p>
+
+      <button type="submit" class="btn-primary full">Login</button>
+      <button type="button" class="link-btn" id="forgotPasswordBtn">Forgot password?</button>
+    </form>
+
+    <p class="auth-switch">Don't have an account? <a href="signup.html">Sign up here</a></p>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 CALTIVATOR STYLE.</span>
+  </div>
+</footer>
+
+<script type="module" src="auth.js"></script>
+</body>
+</html>

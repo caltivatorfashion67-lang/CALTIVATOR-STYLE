@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>My Wishlist - Caltivator Style</title>
+<meta name="description" content="Your saved products at Caltivator Style.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">Caltivator Style</a>
+    <nav class="main-nav">
+      <a href="shop.html">Shop</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<section class="shop-page">
+  <div class="container">
+    <h1 class="section-title">My Wishlist</h1>
+    <div class="product-grid" id="wishlistGrid"></div>
+    <p id="wishlistEmpty" class="no-orders" style="display:none;">Your wishlist is empty. <a href="shop.html">Browse products</a>.</p>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 Caltivator Style.</span>
+  </div>
+</footer>
+
+<script src="products.js"></script>
+<script src="wishlist.js"></script>
+<script type="module" src="auth-header.js"></script>
+<script>
+function renderWishlistPage(){
+  const ids = getWishlist();
+  const grid = document.getElementById("wishlistGrid");
+  const emptyMsg = document.getElementById("wishlistEmpty");
+  const items = ALL_PRODUCTS.filter(p => ids.includes(p.id));
+
+  if(items.length === 0){
+    grid.innerHTML = "";
+    emptyMsg.style.display = "block";
+    return;
+  }
+  emptyMsg.style.display = "none";
+
+  grid.innerHTML = items.map(p => `
+    <a class="product-card" href="product.html?id=${p.id}">
+      <button type="button" class="wish-heart active" data-id="${p.id}" onclick="event.preventDefault(); toggleWishlist('${p.id}'); renderWishlistPage();">&#9825;</button>
+      <div class="img-wrap"><img src="${p.images[0]}" alt="${p.name}" loading="lazy"></div>
+      <div class="product-info">
+        <h4>${p.name}</h4>
+        <div class="price">₹${p.price.toLocaleString("en-IN")}</div>
+      </div>
+    </a>
+  `).join("");
+}
+renderWishlistPage();
+</script>
+</body>
+</html>

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Admin - CALTIVATOR STYLE</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-requires-auth="true">
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav">
+      <span style="font-weight:600;">Admin Panel</span>
+    </nav>
+    <div class="header-actions">
+      <button class="btn-text" id="logoutBtn" style="cursor:pointer;background:none;border:none;font-family:'Inter',sans-serif;">Logout</button>
+    </div>
+  </div>
+</header>
+
+<section class="account-section">
+  <div class="container">
+    <p class="eyebrow">Store Owner</p>
+    <div id="adminMsg"></div>
+
+    <div id="adminContent" style="display:none;">
+      <div class="admin-tabs">
+        <button class="admin-tab-btn active" data-tab="orders">Orders</button>
+        <button class="admin-tab-btn" data-tab="stock">Manage Size Stock</button>
+      </div>
+
+      <div id="ordersTab" class="admin-tab-panel">
+        <h2 class="section-title">All Customer Orders</h2>
+        <div class="order-list" id="adminOrderList"></div>
+      </div>
+
+      <div id="stockTab" class="admin-tab-panel" style="display:none;">
+        <h2 class="section-title">Manage Size Stock</h2>
+        <p class="stock-hint">Set a size's stock to <strong>0</strong> to mark it out of stock — it will automatically show as struck-through and unselectable on the product page.</p>
+        <div id="stockList"></div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 CALTIVATOR STYLE.</span>
+  </div>
+</footer>
+
+<script src="products.js"></script>
+<script type="module" src="auth-header.js"></script>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { collection, query, orderBy, getDocs, doc, updateDoc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---- IMPORTANT: replace this with YOUR OWN email (the one you sign up with) ----
+const ADMIN_EMAIL = "caltivatorfashion67@gmail.com";
+
+const msgEl = document.getElementById("adminMsg");
+const contentEl = document.getElementById("adminContent");
+const listEl = document.getElementById("adminOrderList");
+const statusOptions = ["Placed", "Shipped", "Delivered", "Cancelled"];
+
+onAuthStateChanged(auth, async (user) => {
+  if (!user) return; // auth-header.js redirects to login
+
+  if (user.email.toLowerCase() !== ADMIN_EMAIL.toLowerCase()) {
+    msgEl.innerHTML = `<p class="field-error">You don't have access to this page.</p>`;
+    return;
+  }
+
+  contentEl.style.display = "block";
+  loadOrders();
+  loadStockManager();
+});
+
+// ---- Tab switching ----
+document.querySelectorAll(".admin-tab-btn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".admin-tab-btn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    document.querySelectorAll(".admin-tab-panel").forEach(p => p.style.display = "none");
+    document.getElementById(btn.dataset.tab + "Tab").style.display = "block";
+  });
+});
+
+// ---- Orders ----
+async function loadOrders(){
+  const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
+  const snap = await getDocs(q);
+
+  if (snap.empty) {
+    listEl.innerHTML = `<p class="no-orders">No orders yet.</p>`;
+    return;
+  }
+
+  listEl.innerHTML = snap.docs.map(docSnap => {
+    const o = docSnap.data();
+    return `
+      <div class="order-card">
+        <div class="order-top">
+          <span class="order-id">Order #${o.orderId}</span>
+          <select class="status-select" data-doc-id="${docSnap.id}">
+            ${statusOptions.map(s => `<option value="${s}" ${o.status === s ? "selected" : ""}>${s}</option>`).join("")}
+          </select>
+        </div>
+        <p class="order-items">${o.items}</p>
+        <p class="order-eta">Estimated delivery: ${o.estimatedDelivery || "-"}</p>
+        <p class="order-customer">${o.customerName} &middot; ${o.customerPhone}</p>
+        <p class="order-customer">${o.address}, ${o.city} - ${o.pincode}</p>
+        <div class="order-bottom">
+          <span>${o.date}</span>
+          <span>₹${o.total.toLocaleString("en-IN")}</span>
+        </div>
+      </div>
+    `;
+  }).join("");
+
+  document.querySelectorAll(".status-select").forEach(select => {
+    select.addEventListener("change", async () => {
+      await updateDoc(doc(db, "orders", select.dataset.docId), { status: select.value });
+    });
+  });
+}
+
+// ---- Size Stock Manager ----
+async function loadStockManager(){
+  const stockListEl = document.getElementById("stockList");
+  const sizedProducts = ALL_PRODUCTS.filter(p => p.sizeType);
+
+  const rows = await Promise.all(sizedProducts.map(async (p) => {
+    let sizeStock = {};
+    try {
+      const snap = await getDoc(doc(db, "productStock", p.id));
+      if (snap.exists()) sizeStock = snap.data();
+    } catch (err) { /* fall back to defaults below */ }
+
+    const sizes = p.sizeType ? SIZE_OPTIONS[p.sizeType] : ["TOTAL"];
+const inputs = sizes.map(s => `
+  <label class="stock-input-group">
+    <span>${s === "TOTAL" ? "Stock" : s}</span>
+    <input type="number" min="0" class="stock-input" data-size="${s}" value="${stockData[s] !== undefined ? stockData[s] : p.stock}">
+  </label>
+`).join("");
+
+    return `
+      <div class="stock-card" data-product-id="${p.id}">
+        <div class="stock-card-head">
+          <img src="${p.images[0]}" alt="${p.name}">
+          <h4>${p.name}</h4>
+        </div>
+        <div class="stock-inputs">${inputs}</div>
+        <button class="btn-outline save-stock-btn" data-product-id="${p.id}">Save Stock</button>
+        <span class="save-msg" id="saveMsg-${p.id}"></span>
+      </div>
+    `;
+  }));
+
+  stockListEl.innerHTML = rows.join("");
+
+  document.querySelectorAll(".save-stock-btn").forEach(btn => {
+    btn.addEventListener("click", async () => {
+      const pid = btn.dataset.productId;
+      const card = document.querySelector(`.stock-card[data-product-id="${pid}"]`);
+      const data = {};
+      card.querySelectorAll(".stock-input").forEach(input => {
+        data[input.dataset.size] = parseInt(input.value, 10) || 0;
+      });
+
+      btn.disabled = true;
+      btn.textContent = "Saving...";
+      try {
+        await setDoc(doc(db, "productStock", pid), data);
+        document.getElementById(`saveMsg-${pid}`).textContent = "Saved!";
+      } catch (err) {
+        document.getElementById(`saveMsg-${pid}`).textContent = "Failed to save.";
+      }
+      btn.disabled = false;
+      btn.textContent = "Save Stock";
+      setTimeout(() => { document.getElementById(`saveMsg-${pid}`).textContent = ""; }, 2500);
+    });
+  });
+}
+</script>
+</body>
+</html>

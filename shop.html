@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Shop - CALTIVATOR STYLE</title>
+<meta name="description" content="Browse Men's clothing, Women, and Trending Outfits at CALTIVATOR STYLE. Filter by category or search for what you need.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<header class="site-header">
+  <div class="container header-inner">
+    <button class="hamburger" id="hamburgerBtn" aria-label="Menu">
+      <button type="button" class="wish-heart ${isInWishlist(p.id) ? "active" : ""}" data-id="${p.id}" onclick="event.preventDefault(); this.classList.toggle('active', toggleWishlist('${p.id}'));">&#9825;</button>
+      <span></span><span></span><span></span>
+    </button>
+    <a href="index.html" class="logo">CALTIVATOR STYLE</a>
+    <nav class="main-nav" id="mainNav">
+      <a href="shop.html">Shop</a>
+      <a href="shop.html?cat=Men">Men</a>
+      <a href="shop.html?cat=Women">Women</a>
+      <a href="shop.html?cat=Trending Outfits">Trending Outfits</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <form class="search-form" id="searchForm">
+      <input type="search" id="searchInput" placeholder="Search products...">
+    </form>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+      <a href="wishlist.html" class="wishlist-btn" title="Wishlist">&#9825; <span id="wishlistCount">0</span></a>
+      <button class="cart-btn" id="cartToggle">Cart (<span id="cartCount">0</span>)</button>
+    </div>
+  </div>
+</header>
+
+<!-- CART DRAWER -->
+<aside class="cart-drawer" id="cartDrawer">
+  <div class="cart-drawer-head">
+    <h3>Your Cart</h3>
+    <button id="cartClose">&times;</button>
+  </div>
+  <div class="cart-items" id="cartItems">
+    <p class="cart-empty-msg">No items found.</p>
+  </div>
+  <div class="cart-subtotal">
+    <span>Subtotal</span>
+    <span id="cartSubtotalValue">₹0</span>
+  </div>
+  <button class="btn-primary full" id="checkoutBtn">Continue to Checkout</button>
+</aside>
+<div class="overlay" id="overlay"></div>
+
+<section class="shop-page">
+  <div class="container">
+    <h1 class="section-title" id="shopTitle">All Products</h1>
+
+    <div class="shop-filters">
+      <button class="filter-chip" data-cat="all">All</button>
+      <button class="filter-chip" data-cat="Men">Men</button>
+      <button class="filter-chip" data-cat="Women">Women</button>
+      <button class="filter-chip" data-cat="Trending Outfits">Trending Outfits</button>
+    </div>
+
+    <div class="product-grid" id="shopGrid"></div>
+    <p id="noResults" class="no-orders" style="display:none;">No products match your search.</p>
+  </div>
+</section>
+
+<footer class="site-footer" id="contact">
+  <div class="container footer-grid">
+    <div class="footer-brand">
+      <div class="logo">CALTIVATOR STYLE</div>
+      <p>Free Shipping &middot; Flexible Payment &middot; Fast Delivery &middot; Premium Support</p>
+    </div>
+    <div>
+      <h5>Pages</h5>
+      <a href="shop.html">Shop</a><a href="index.html#collection">Collection</a><a href="contact.html">Contact us</a>
+    </div>
+  </div>
+  <div class="container footer-bottom">
+    <span>&copy; 2026 CALTIVATOR STYLE.</span>
+  </div>
+</footer>
+
+<script src="products.js"></script>
+<script src="cart.js"></script>
+<script type="module" src="auth-header.js"></script>
+<script>
+const params = new URLSearchParams(window.location.search);
+let activeCategory = params.get("cat") || "all";
+let searchTerm = (params.get("search") || "").toLowerCase();
+
+if(searchTerm) document.getElementById("searchInput").value = searchTerm;
+
+function renderShop(){
+  const grid = document.getElementById("shopGrid");
+  const noResults = document.getElementById("noResults");
+
+  let list = ALL_PRODUCTS;
+  if(activeCategory !== "all") list = list.filter(p => p.category === activeCategory);
+  if(searchTerm) list = list.filter(p => p.name.toLowerCase().includes(searchTerm));
+
+  document.getElementById("shopTitle").textContent =
+    activeCategory === "all" ? "All Products" :
+    activeCategory === "Men" ? "Men" :
+    activeCategory === "Women" ? "Women" : "Trending Outfits";
+
+  document.querySelectorAll(".filter-chip").forEach(chip => {
+    chip.classList.toggle("active", chip.dataset.cat === activeCategory);
+  });
+
+  if(list.length === 0){
+    grid.innerHTML = "";
+    noResults.style.display = "block";
+    return;
+  }
+  noResults.style.display = "none";
+
+  grid.innerHTML = list.map(p => `
+    <a class="product-card" href="product.html?id=${p.id}">
+      <div class="img-wrap"><img src="${p.images[0]}" alt="${p.name}" loading="lazy"></div>
+      <div class="product-info">
+        <h4>${p.name}</h4>
+        <div class="price">₹${p.price.toLocaleString("en-IN")}${p.oldPrice ? `<span class="old">₹${p.oldPrice.toLocaleString("en-IN")}</span>` : ""}</div>
+        <p class="stock-note">${p.stock > 0 ? p.stock + " left in stock" : "Out of stock"}</p>
+      </div>
+    </a>
+  `).join("");
+}
+renderShop();
+
+document.querySelectorAll(".filter-chip").forEach(chip => {
+  chip.addEventListener("click", () => {
+    activeCategory = chip.dataset.cat;
+    renderShop();
+  });
+});
+
+document.getElementById("searchForm").addEventListener("submit", function(e){
+  e.preventDefault();
+  searchTerm = document.getElementById("searchInput").value.trim().toLowerCase();
+  renderShop();
+});
+</script>
+<script src="script.js"></script>
+</body>
+</html>

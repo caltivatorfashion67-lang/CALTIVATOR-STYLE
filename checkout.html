@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Checkout - Caltivator Styls</title>
+<script src="https://checkout.razorpay.com/v1/checkout.js"></script>
+<meta name="description" content="Complete your Caltivator Styls order.">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="style.css">
+</head>
+<body data-requires-auth="true">
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a href="index.html" class="logo">Caltivator Styls</a>
+    <nav class="main-nav">
+      <a href="index.html#shop">Shop</a>
+      <a href="index.html#collection">Collection</a>
+      <a href="contact.html">Contact</a>
+    </nav>
+    <div class="header-actions">
+      <a href="signup.html" class="btn-text" id="signupLink">Sign Up</a>
+    </div>
+  </div>
+</header>
+
+<section class="checkout-section">
+  <div class="container checkout-grid">
+
+    <div class="checkout-form-col">
+      <h2 class="section-title">Delivery Details</h2>
+      <form id="checkoutForm" class="auth-form" novalidate>
+        <label>
+          Full Name
+          <input type="text" id="cName" required minlength="2">
+        </label>
+        <label>
+          Phone Number
+          <input type="tel" id="cPhone" pattern="[0-9]{10}" placeholder="10-digit mobile number" required>
+        </label>
+        <label>
+          Full Address
+          <input type="text" id="cAddress" placeholder="House no, street, area" required>
+        </label>
+        <label>
+          City
+          <input type="text" id="cCity" required>
+        </label>
+        <label>
+          Pincode
+          <input type="text" id="cPincode" pattern="[0-9]{6}" placeholder="6-digit pincode" required>
+        </label>
+        <p class="field-error" id="checkoutError"></p>
+        <button type="submit" class="btn-primary full" id="placeOrderBtn">Place Order</button>
+      </form>
+    </div>
+
+    <div class="checkout-summary-col">
+      <h2 class="section-title">Order Summary</h2>
+      <div id="summaryItems" class="summary-items"></div>
+
+      <div class="coupon-row">
+        <input type="text" id="couponInput" placeholder="Have a coupon code?">
+        <button type="button" class="btn-outline" id="applyCouponBtn">Apply</button>
+      </div>
+      <p class="coupon-msg" id="couponMsg"></p>
+
+      <div class="summary-delivery">
+        <span>Delivery</span>
+        <span id="summaryDeliveryValue">₹0</span>
+      </div>
+      <div class="summary-delivery" id="couponDiscountRow" style="display:none;">
+        <span>Discount</span>
+        <span id="summaryDiscountValue">-₹0</span>
+      </div>
+      <div class="summary-delivery">
+        <span>Estimated Delivery</span>
+        <span id="summaryEta">-</span>
+      </div>
+      <div class="summary-total">
+        <span>Total</span>
+        <span id="summaryTotal">₹0</span>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+<footer class="site-footer">
+  <div class="container footer-bottom">
+    <span>&copy; 2026 Caltivator Styls.</span>
+  </div>
+</footer>
+
+<script src="products.js"></script>
+<script src="cart.js"></script>
+<script type="module" src="auth-header.js"></script>
+<script type="module">
+import { auth, db } from "./firebase-config.js";
+import { onAuthStateChanged } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+import { collection, addDoc, serverTimestamp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+// ---- Vercel API helpers (replaces Firebase Cloud Functions) ----
+async function createRazorpayOrder(amount){
+  const res = await fetch("/api/create-order", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ amount })
+  });
+  if(!res.ok) throw new Error("Could not create Razorpay order");
+  return res.json();
+}
+
+async function verifyRazorpayPayment(paymentData){
+  const res = await fetch("/api/verify-payment", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(paymentData)
+  });
+  const data = await res.json();
+  if(!res.ok || !data.verified) throw new Error("Payment verification failed");
+  return data;
+}
+
+// ---- Delivery charge: free above ₹1999, otherwise ₹99 flat ----
+const DELIVERY_FEE = 99;
+const FREE_DELIVERY_THRESHOLD = 1999;
+const DELIVERY_DAYS_MIN = 5;
+const DELIVERY_DAYS_MAX = 7;
+
+// ---- Coupon codes: edit this list to add/remove your own coupons ----
+const COUPONS = {
+  "WELCOME10": { type: "percent", value: 10 },   // 10% off
+  "FLAT200":   { type: "flat", value: 200 }       // ₹200 off
+};
+let appliedCoupon = null;
+
+function getDeliveryFee(){
+  return getCartTotal() >= FREE_DELIVERY_THRESHOLD ? 0 : DELIVERY_FEE;
+}
+function getDiscount(){
+  if(!appliedCoupon) return 0;
+  const c = COUPONS[appliedCoupon];
+  if(!c) return 0;
+  return c.type === "percent" ? Math.round(getCartTotal() * c.value / 100) : c.value;
+}
+function getGrandTotal(){
+  const total = getCartTotal() + getDeliveryFee() - getDiscount();
+  return total > 0 ? total : 0;
+}
+
+// ---- Estimated delivery: today + 5 to 7 business days ----
+function formatDate(d){
+  return d.toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" });
+}
+function addDays(date, days){
+  const d = new Date(date);
+  d.setDate(d.getDate() + days);
+  return d;
+}
+function getEtaText(){
+  const from = addDays(new Date(), DELIVERY_DAYS_MIN);
+  const to = addDays(new Date(), DELIVERY_DAYS_MAX);
+  return formatDate(from) + " - " + formatDate(to);
+}
+
+// ---- Render order summary from cart ----
+function renderSummary(){
+  const cart = getCart();
+  const itemsEl = document.getElementById("summaryItems");
+
+  if(cart.length === 0){
+    itemsEl.innerHTML = `<p>Your cart is empty. <a href="index.html#shop">Go shopping</a>.</p>`;
+    document.getElementById("summaryTotal").textContent = "₹0";
+    return;
+  }
+
+  itemsEl.innerHTML = cart.map(item => `
+    <div class="summary-item">
+      <img src="${item.image}" alt="${item.name}">
+      <div class="summary-item-info">
+        <h5>${item.name}</h5>
+        ${item.size ? `<p class="size-tag">Size: ${item.size}</p>` : ""}
+        <p>Qty: ${item.qty}</p>
+      </div>
+      <span>₹${(item.price * item.qty).toLocaleString("en-IN")}</span>
+    </div>
+  `).join("");
+
+  const fee = getDeliveryFee();
+  document.getElementById("summaryDeliveryValue").textContent = fee === 0 ? "FREE" : "₹" + fee;
+  document.getElementById("summaryEta").textContent = getEtaText();
+
+  const discount = getDiscount();
+  const discountRow = document.getElementById("couponDiscountRow");
+  if(discount > 0){
+    discountRow.style.display = "flex";
+    document.getElementById("summaryDiscountValue").textContent = "-₹" + discount.toLocaleString("en-IN");
+  } else {
+    discountRow.style.display = "none";
+  }
+  document.getElementById("summaryTotal").textContent = "₹" + getGrandTotal().toLocaleString("en-IN");
+}
+renderSummary();
+
+// ---- Apply coupon ----
+document.getElementById("applyCouponBtn").addEventListener("click", () => {
+  const code = document.getElementById("couponInput").value.trim().toUpperCase();
+  const msgEl = document.getElementById("couponMsg");
+  if(!code){
+    msgEl.style.color = "";
+    msgEl.textContent = "Enter a coupon code.";
+    return;
+  }
+  if(COUPONS[code]){
+    appliedCoupon = code;
+    msgEl.style.color = "#1e6b3a";
+    msgEl.textContent = "Coupon applied!";
+  } else {
+    appliedCoupon = null;
+    msgEl.style.color = "#b3261e";
+    msgEl.textContent = "Invalid coupon code.";
+  }
+  renderSummary();
+});
+
+// ---- Place Order (writes to Firestore, visible to the store owner too) ----
+let currentUser = null;
+onAuthStateChanged(auth, (user) => { currentUser = user; });
+
+document.getElementById("checkoutForm").addEventListener("submit", async function(e){
+  e.preventDefault();
+  const errorEl = document.getElementById("checkoutError");
+  errorEl.textContent = "";
+
+  if(!currentUser){
+    errorEl.textContent = "Please log in first.";
+    return;
+  }
+  if(getCart().length === 0){
+    errorEl.textContent = "Your cart is empty.";
+    return;
+  }
+  if(!/^[0-9]{10}$/.test(document.getElementById("cPhone").value.trim())){
+    errorEl.textContent = "Please enter a valid 10-digit phone number.";
+    return;
+  }
+  if(!/^[0-9]{6}$/.test(document.getElementById("cPincode").value.trim())){
+    errorEl.textContent = "Please enter a valid 6-digit pincode.";
+    return;
+  }
+
+  const placeBtn = document.getElementById("placeOrderBtn");
+  placeBtn.disabled = true;
+  placeBtn.textContent = "Processing Payment...";
+
+  const cart = getCart();
+  const orderId = "CULT" + Math.floor(10000 + Math.random() * 89999);
+  const etaDate = addDays(new Date(), DELIVERY_DAYS_MAX);
+  const grandTotal = getGrandTotal();
+
+  async function saveOrderAfterPayment(paymentId){
+    try {
+      await addDoc(collection(db, "orders"), {
+        uid: currentUser.uid,
+        orderId: orderId,
+        date: new Date().toLocaleDateString("en-IN", { day: "numeric", month: "long", year: "numeric" }),
+        estimatedDelivery: formatDate(etaDate),
+        items: cart.map(i => i.name + (i.size ? ` (Size: ${i.size})` : "") + ` x${i.qty}`).join(", "),
+        itemsList: cart.map(i => ({ name: i.name, size: i.size || null, qty: i.qty, price: i.price })),
+        total: grandTotal,
+        deliveryFee: getDeliveryFee(),
+        couponCode: appliedCoupon || null,
+        discount: getDiscount(),
+        status: "Placed",
+        paymentId: paymentId,
+        paymentStatus: "Paid",
+        customerName: document.getElementById("cName").value.trim(),
+        customerPhone: document.getElementById("cPhone").value.trim(),
+        address: document.getElementById("cAddress").value.trim(),
+        city: document.getElementById("cCity").value.trim(),
+        pincode: document.getElementById("cPincode").value.trim(),
+        createdAt: serverTimestamp()
+      });
+
+      localStorage.setItem("Caltivator Styls_cart", "[]");
+      window.location.href = "order-success.html?orderId=" + orderId + "&eta=" + encodeURIComponent(formatDate(etaDate));
+    } catch (err) {
+      errorEl.textContent = "Payment succeeded but saving the order failed. Please contact support with payment ID: " + paymentId;
+      placeBtn.disabled = false;
+      placeBtn.textContent = "Place Order";
+    }
+  }
+
+  try {
+    // ---- Step 1: Ask our Vercel API to create a Razorpay order ----
+    const result = await createRazorpayOrder(grandTotal);
+    const { orderId: razorpayOrderId, amount, currency, keyId } = result;
+
+    // ---- Step 2: Open the Razorpay popup ----
+    const options = {
+      key: keyId,
+      amount: amount,
+      currency: currency,
+      order_id: razorpayOrderId,
+      name: "Caltivator Styls",
+      description: "Order Payment",
+      handler: async function(response){
+        try {
+          // ---- Step 3: Verify the payment signature server-side ----
+          const verifyResult = await verifyRazorpayPayment({
+            razorpay_order_id: response.razorpay_order_id,
+            razorpay_payment_id: response.razorpay_payment_id,
+            razorpay_signature: response.razorpay_signature
+          });
+          if(verifyResult.verified){
+            await saveOrderAfterPayment(response.razorpay_payment_id);
+          }
+        } catch (err) {
+          errorEl.textContent = "Payment verification failed. If money was deducted, please contact support.";
+          placeBtn.disabled = false;
+          placeBtn.textContent = "Place Order";
+        }
+      },
+      modal: {
+        ondismiss: function(){
+          placeBtn.disabled = false;
+          placeBtn.textContent = "Place Order";
+        }
+      },
+      prefill: {
+        name: document.getElementById("cName").value.trim(),
+        contact: document.getElementById("cPhone").value.trim()
+      },
+      theme: { color: "#1c1b19" }
+    };
+
+    const rzp = new Razorpay(options);
+    rzp.on("payment.failed", function(response){
+      errorEl.textContent = "Payment failed: " + response.error.description;
+      placeBtn.disabled = false;
+      placeBtn.textContent = "Place Order";
+    });
+    rzp.open();
+
+  } catch (err) {
+    console.error("Razorpay payment error:", err);
+    errorEl.textContent = "Could not start payment: " + (err.message || "Unknown error") + " (check browser console for details)";
+    placeBtn.disabled = false;
+    placeBtn.textContent = "Place Order";
+  }
+});
+</script>
+<script src="script.js"></script>
+</body>
+</html>
