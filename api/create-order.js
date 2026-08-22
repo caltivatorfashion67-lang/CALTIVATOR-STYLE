@@ -10,16 +10,26 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: "Invalid amount" });
   }
 
-  const razorpay = new Razorpay({
-    key_id: process.env.RAZORPAY_KEY_ID,
-    key_secret: process.env.RAZORPAY_KEY_SECRET,
-  });
+  // ---- Defensive trim: strips accidental leading/trailing spaces or
+  //      newlines that can sneak in when pasting into Vercel's env var UI.
+  //      A stray space here is the #1 cause of "Authentication failed". ----
+  const keyId = (process.env.RAZORPAY_KEY_ID || "").trim();
+  const keySecret = (process.env.RAZORPAY_KEY_SECRET || "").trim();
 
-  // ---- Sanity check: catch missing/misconfigured env vars immediately ----
-  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-    console.error("Missing Razorpay env vars. RAZORPAY_KEY_ID set:", !!process.env.RAZORPAY_KEY_ID, "RAZORPAY_KEY_SECRET set:", !!process.env.RAZORPAY_KEY_SECRET);
+  if (!keyId || !keySecret) {
+    console.error("Missing Razorpay env vars. RAZORPAY_KEY_ID set:", !!keyId, "RAZORPAY_KEY_SECRET set:", !!keySecret);
     return res.status(500).json({ error: "Razorpay keys are not configured on the server. Check your Vercel Environment Variables." });
   }
+
+  // ---- Debug line: logs a masked preview so you can confirm (in Vercel's
+  //      function logs) that the key being used is actually the one you expect,
+  //      without ever exposing the full secret. ----
+  console.log("Using Razorpay key_id:", keyId.slice(0, 12) + "..." + keyId.slice(-4), "| length:", keyId.length, "| secret length:", keySecret.length);
+
+  const razorpay = new Razorpay({
+    key_id: keyId,
+    key_secret: keySecret,
+  });
 
   try {
     const order = await razorpay.orders.create({
@@ -32,7 +42,7 @@ module.exports = async (req, res) => {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: process.env.RAZORPAY_KEY_ID, // safe to send back — the Key ID is meant to be public
+      keyId: keyId, // safe to send back — the Key ID is meant to be public
     });
   } catch (err) {
     console.error("Razorpay order creation failed:", err);
