@@ -48,7 +48,7 @@ if (signupForm) {
         phone: phone
       });
 
-      window.location.href = "account.html";
+      redirectAfterAuth();
     } catch (err) {
       errorEl.textContent = friendlyError(err.code);
     }
@@ -67,7 +67,7 @@ if (loginForm) {
 
     try {
       await signInWithEmailAndPassword(auth, email, password);
-      window.location.href = "account.html";
+      redirectAfterAuth();
     } catch (err) {
       errorEl.textContent = friendlyError(err.code);
     }
@@ -93,6 +93,14 @@ if (forgotBtn) {
       errorEl.textContent = friendlyError(err.code);
     }
   });
+}
+
+// ---- Redirect after successful login/signup: send the customer back to
+//      wherever they were trying to go (e.g. checkout), or the shop by default. ----
+function redirectAfterAuth() {
+  const redirectTo = sessionStorage.getItem("redirectAfterLogin");
+  sessionStorage.removeItem("redirectAfterLogin");
+  window.location.href = redirectTo || "shop.html";
 }
 
 // ---- Convert Firebase error codes into simple messages ----

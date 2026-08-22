@@ -3,8 +3,8 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>My Account - Caltivator Style</title>
-<meta name="description" content="View your Caltivator Style profile and order history.">
+<title>My Account - Caltivator Styls</title>
+<meta name="description" content="View your Caltivator Styls profile and order history.">
 <link rel="icon" type="image/svg+xml" href="favicon.svg">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -14,7 +14,7 @@
 
 <header class="site-header">
   <div class="container header-inner">
-    <a href="index.html" class="logo">Caltivator Style</a>
+    <a href="index.html" class="logo">Caltivator Styls</a>
     <nav class="main-nav">
       <a href="index.html#shop">Shop</a>
       <a href="index.html#collection">Collection</a>
@@ -64,7 +64,7 @@
 
 <footer class="site-footer">
   <div class="container footer-bottom">
-    <span>&copy; 2026 Caltivator Style.</span>
+    <span>&copy; 2026 Caltivator Styls.</span>
   </div>
 </footer>
 
@@ -76,13 +76,33 @@ import { doc, getDoc, updateDoc, collection, query, where, getDocs } from "https
 
 let currentUid = null;
 
+// ---- Timeout helper: forces a promise to fail if it takes too long ----
+function withTimeout(promise, ms, label){
+  return Promise.race([
+    promise,
+    new Promise((_, reject) => setTimeout(() => reject(new Error(label + " timed out")), ms))
+  ]);
+}
+
+// ---- Global watchdog: if nothing has happened in 12 seconds, something is
+//      badly stuck (e.g. Firebase itself never responded) — show a manual retry
+//      instead of leaving the page on "Loading..." forever. ----
+const watchdogTimer = setTimeout(() => {
+  if(document.getElementById("profileName").textContent === "Loading..."){
+    document.getElementById("profileName").textContent = "Could not load your account";
+    document.getElementById("profilePhone").textContent = "Please check your internet connection and try again.";
+    document.getElementById("orderList").innerHTML = `<p class="no-orders">Could not load orders. <button onclick="window.location.reload()" class="link-btn" style="display:inline;margin:0;padding:0;">Reload page</button></p>`;
+  }
+}, 12000);
+
 onAuthStateChanged(auth, async (user) => {
+  clearTimeout(watchdogTimer);
   if (!user) return; // auth-header.js will redirect to login.html
   currentUid = user.uid;
 
   // ---- Load profile from Firestore (with a safe fallback so the page never gets stuck) ----
   try {
-    const profileSnap = await getDoc(doc(db, "users", user.uid));
+    const profileSnap = await withTimeout(getDoc(doc(db, "users", user.uid)), 8000, "Profile fetch");
     const profile = profileSnap.exists()
       ? profileSnap.data()
       : { name: user.displayName || "Customer", email: user.email, phone: "" };
@@ -98,7 +118,7 @@ onAuthStateChanged(auth, async (user) => {
     // Fall back to whatever Firebase Auth already knows, so the page still shows something useful.
     document.getElementById("profileName").textContent = user.displayName || "Customer";
     document.getElementById("profileEmail").textContent = user.email || "";
-    document.getElementById("profilePhone").textContent = "Could not load (check Firestore rules)";
+    document.getElementById("profilePhone").textContent = "Could not load (check Firestore rules or your connection)";
     document.getElementById("avatarInitial").textContent = (user.displayName || "C").charAt(0).toUpperCase();
   }
 
@@ -140,7 +160,7 @@ async function loadOrders(uid){
     // fields needs a Firestore composite index. We sort in JavaScript instead,
     // which needs no extra setup.
     const q = query(collection(db, "orders"), where("uid", "==", uid));
-    const querySnap = await getDocs(q);
+    const querySnap = await withTimeout(getDocs(q), 8000, "Orders fetch");
 
     if (querySnap.empty) {
       orderList.innerHTML = `<p class="no-orders">You haven't placed any orders yet. <a href="index.html#shop">Start shopping</a>.</p>`;

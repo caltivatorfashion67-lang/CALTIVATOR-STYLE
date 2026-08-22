@@ -31,8 +31,10 @@ onAuthStateChanged(auth, async (user) => {
       signupLink.textContent = "Sign Up";
       signupLink.href = "signup.html";
     }
-    // If we're on a page that requires login (account.html), send them to login
+    // If we're on a page that requires login (account.html, checkout.html, etc.),
+    // remember where the customer was trying to go, then send them to login.
     if (document.body.dataset.requiresAuth === "true") {
+      sessionStorage.setItem("redirectAfterLogin", window.location.pathname + window.location.search);
       window.location.href = "login.html";
     }
   }

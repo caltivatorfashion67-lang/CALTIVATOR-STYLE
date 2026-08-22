@@ -110,8 +110,9 @@ async function createRazorpayOrder(amount){
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ amount })
   });
-  if(!res.ok) throw new Error("Could not create Razorpay order");
-  return res.json();
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok) throw new Error(data.error || "Could not create Razorpay order");
+  return data;
 }
 
 async function verifyRazorpayPayment(paymentData){
@@ -120,8 +121,8 @@ async function verifyRazorpayPayment(paymentData){
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(paymentData)
   });
-  const data = await res.json();
-  if(!res.ok || !data.verified) throw new Error("Payment verification failed");
+  const data = await res.json().catch(() => ({}));
+  if(!res.ok || !data.verified) throw new Error(data.error || "Payment verification failed");
   return data;
 }
 

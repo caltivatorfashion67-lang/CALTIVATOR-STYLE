@@ -15,6 +15,12 @@ module.exports = async (req, res) => {
     key_secret: process.env.RAZORPAY_KEY_SECRET,
   });
 
+  // ---- Sanity check: catch missing/misconfigured env vars immediately ----
+  if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
+    console.error("Missing Razorpay env vars. RAZORPAY_KEY_ID set:", !!process.env.RAZORPAY_KEY_ID, "RAZORPAY_KEY_SECRET set:", !!process.env.RAZORPAY_KEY_SECRET);
+    return res.status(500).json({ error: "Razorpay keys are not configured on the server. Check your Vercel Environment Variables." });
+  }
+
   try {
     const order = await razorpay.orders.create({
       amount: Math.round(amount * 100), // Razorpay expects paise, not rupees
@@ -30,6 +36,8 @@ module.exports = async (req, res) => {
     });
   } catch (err) {
     console.error("Razorpay order creation failed:", err);
-    res.status(500).json({ error: "Could not create order" });
+    // Include Razorpay's actual error message so the real cause shows up on the frontend too.
+    const detail = err?.error?.description || err?.message || "Unknown error";
+    res.status(500).json({ error: "Could not create order: " + detail });
   }
 };
