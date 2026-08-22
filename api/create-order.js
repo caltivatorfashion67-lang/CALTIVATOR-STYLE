@@ -1,4 +1,4 @@
-const Razorpay = require("razorpay");
+﻿const Razorpay = require("razorpay");
 
 module.exports = async (req, res) => {
   if (req.method !== "POST") {
@@ -10,9 +10,6 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: "Invalid amount" });
   }
 
-  // ---- Defensive trim: strips accidental leading/trailing spaces or
-  //      newlines that can sneak in when pasting into Vercel's env var UI.
-  //      A stray space here is the #1 cause of "Authentication failed". ----
   const keyId = (process.env.RAZORPAY_KEY_ID || "").trim();
   const keySecret = (process.env.RAZORPAY_KEY_SECRET || "").trim();
 
@@ -21,9 +18,6 @@ module.exports = async (req, res) => {
     return res.status(500).json({ error: "Razorpay keys are not configured on the server. Check your Vercel Environment Variables." });
   }
 
-  // ---- Debug line: logs a masked preview so you can confirm (in Vercel's
-  //      function logs) that the key being used is actually the one you expect,
-  //      without ever exposing the full secret. ----
   console.log("Using Razorpay key_id:", keyId.slice(0, 12) + "..." + keyId.slice(-4), "| length:", keyId.length, "| secret length:", keySecret.length);
 
   const razorpay = new Razorpay({
@@ -33,7 +27,7 @@ module.exports = async (req, res) => {
 
   try {
     const order = await razorpay.orders.create({
-      amount: Math.round(amount * 100), // Razorpay expects paise, not rupees
+      amount: Math.round(amount * 100),
       currency: "INR",
       receipt: "receipt_" + Date.now(),
     });
@@ -42,11 +36,10 @@ module.exports = async (req, res) => {
       orderId: order.id,
       amount: order.amount,
       currency: order.currency,
-      keyId: keyId, // safe to send back — the Key ID is meant to be public
+      keyId: keyId,
     });
   } catch (err) {
     console.error("Razorpay order creation failed:", err);
-    // Include Razorpay's actual error message so the real cause shows up on the frontend too.
     const detail = err?.error?.description || err?.message || "Unknown error";
     res.status(500).json({ error: "Could not create order: " + detail });
   }
