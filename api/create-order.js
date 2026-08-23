@@ -10,16 +10,20 @@ module.exports = async (req, res) => {
     return res.status(400).json({ error: "Invalid amount" });
   }
 
-  // ============================================================
-  // TEMPORARY DEBUG STEP — keys hardcoded directly here instead of
-  // reading from Vercel Environment Variables, just to isolate
-  // whether the problem is the env vars or the keys themselves.
-  // TODO: remove this hardcoding and switch back to process.env
-  // once the real cause is confirmed.
-  // ============================================================
-  const keyId = "rzp_test_TRByC8jTnTgqTB";
-  const keySecret = "***********************";
+  // ---- Defensive trim: strips accidental leading/trailing spaces or
+  //      newlines that can sneak in when pasting into Vercel's env var UI.
+  //      A stray space here is the #1 cause of "Authentication failed". ----
+  const keyId = (process.env.RAZORPAY_KEY_ID || "").trim();
+  const keySecret = (process.env.RAZORPAY_KEY_SECRET || "").trim();
 
+  if (!keyId || !keySecret) {
+    console.error("Missing Razorpay env vars. RAZORPAY_KEY_ID set:", !!keyId, "RAZORPAY_KEY_SECRET set:", !!keySecret);
+    return res.status(500).json({ error: "Razorpay keys are not configured on the server. Check your Vercel Environment Variables." });
+  }
+
+  // ---- Debug line: logs a masked preview so you can confirm (in Vercel's
+  //      function logs) that the key being used is actually the one you expect,
+  //      without ever exposing the full secret. ----
   console.log("Using Razorpay key_id:", keyId.slice(0, 12) + "..." + keyId.slice(-4), "| length:", keyId.length, "| secret length:", keySecret.length);
 
   const razorpay = new Razorpay({
